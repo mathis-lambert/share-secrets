@@ -10,7 +10,7 @@ Encrypted in the browser. The server stores ciphertext it cannot read.
 [![Image](https://img.shields.io/badge/image-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/mathis-lambert/share-secrets/pkgs/container/share-secrets)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-<img src="docs/assets/encrypt.gif" alt="Typing a secret, which turns into ciphertext before the share link appears" width="880">
+<img src="docs/assets/encrypt.gif" alt="Typing a secret, setting it to expire in 7 days, then creating the link: the text turns into ciphertext and the share dialog opens" width="880">
 
 </div>
 
