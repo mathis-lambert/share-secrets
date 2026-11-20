@@ -24,6 +24,21 @@
   They can read the secret; the recipient will then see that it is gone, which
   at least makes the interception visible.
 
+## AI agents
+
+Instances publish `/llms.txt`, `/openapi.json` and a client at
+`/agent/share.mjs` so agents can create and open links. The client encrypts
+and decrypts on the agent's machine with the same code as the web page: the
+model does not change. Two things are specific to agents:
+
+- A secret an agent creates or reveals has passed through its model context
+  and its provider. The usage policy in `llms.txt` limits what agents do with it
+  (stdin only, links returned to the user only, no reveal without an explicit
+  request, revealed content treated as data), but it cannot undo that exposure.
+- The agent runs code served by the instance. That is the same trust the
+  browser gives the web page; the client is served unminified so it can be
+  reviewed before it runs.
+
 ## Implementation notes
 
 - Key derivation: HKDF-SHA256 over `linkKey || PBKDF2-SHA256(passphrase, 600000)`

@@ -78,6 +78,15 @@ export function HowItWorksPage() {
       </table>
       <p>Logs record the route and the status code of each request. No ids, no IP addresses.</p>
 
+      <h2>For AI agents</h2>
+      <p>
+        Give an agent the address of this instance and it can create links for you. It reads{" "}
+        <a href="/llms.txt">/llms.txt</a>, downloads a small client from <code>/agent/share.mjs</code> and encrypts on
+        its side, exactly like this page: the server still never sees the key. The same file sets the rules agents must
+        follow: secrets on stdin only, links returned to you alone, nothing revealed unless you ask, and the content of a
+        secret treated as data, never as instructions.
+      </p>
+
       <h2>Under the hood</h2>
       <details className="doc-details">
         <summary>Key derivation</summary>

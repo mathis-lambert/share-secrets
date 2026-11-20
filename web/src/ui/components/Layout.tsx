@@ -1,4 +1,4 @@
-import { BookOpen, Scale, ShieldCheck } from "lucide-react";
+import { BookOpen, Bot, Scale, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useConfig } from "@/app/config";
 import { Link } from "@/app/router";
@@ -29,10 +29,17 @@ export function Layout({ children }: { children: ReactNode }) {
           <ShieldCheck size={14} aria-hidden="true" />
           {t.footer}
         </span>
-        <Link to="/legal" className="nav-link">
-          <Scale size={14} aria-hidden="true" />
-          {t.nav.legal}
-        </Link>
+        <span className="footer-links">
+          {/* A plain file, not a page of the app. */}
+          <a href="/llms.txt" className="nav-link">
+            <Bot size={14} aria-hidden="true" />
+            {t.nav.agents}
+          </a>
+          <Link to="/legal" className="nav-link">
+            <Scale size={14} aria-hidden="true" />
+            {t.nav.legal}
+          </Link>
+        </span>
       </footer>
     </div>
   );

@@ -39,6 +39,23 @@ pub fn service(dir: &Path) -> MethodRouter {
             };
             res.headers_mut()
                 .insert(header::CACHE_CONTROL, HeaderValue::from_static(cache));
+            // Our text files (llms.txt, JSON, scripts) are UTF-8; say so.
+            let utf8 = match res
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+            {
+                Some(t)
+                    if !t.contains("charset")
+                        && (t.starts_with("text/") || t.ends_with("javascript")) =>
+                {
+                    HeaderValue::from_str(&format!("{t}; charset=utf-8")).ok()
+                }
+                _ => None,
+            };
+            if let Some(value) = utf8 {
+                res.headers_mut().insert(header::CONTENT_TYPE, value);
+            }
             Ok(res)
         }
     }))
