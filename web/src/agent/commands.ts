@@ -3,7 +3,7 @@
  * test with a fake API. Encryption and decryption happen here, locally.
  */
 import type { Api } from "@/api/client";
-import { parseLink } from "@/secrets/link";
+import { parseLink, parseLinkId } from "@/secrets/link";
 import { keysFor, revealSecret } from "@/secrets/open";
 import { shareSecret } from "@/secrets/share";
 
@@ -48,10 +48,9 @@ export async function create(api: Api, origin: string, input: CreateInput) {
   };
 }
 
-/** Public facts about a secret. Consumes nothing. */
+/** Public facts about a secret. Consumes nothing, and works without the key. */
 export async function info(api: Api, link: string) {
-  const { id } = parseLink(link);
-  const i = await api.inspect(id);
+  const i = await api.inspect(parseLinkId(link));
   return { expiresAt: iso(i.expiresAt), viewsLeft: i.viewsLeft, passphrase: i.passphrase !== null };
 }
 

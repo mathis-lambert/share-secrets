@@ -22,6 +22,9 @@ export class ApiError extends Error {
  * `fetchImpl` is injectable for tests.
  */
 export function createApi(base = "", fetchImpl: typeof fetch = (...args) => fetch(...args)) {
+  // Browser hardening for the page's own API. Non-browser runtimes (the agent
+  // client) do not cache, send cookies or referrers, and may reject these.
+  const browserOnly: RequestInit = base === "" ? { cache: "no-store", credentials: "omit", referrerPolicy: "no-referrer" } : {};
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     let res: Response;
     try {
@@ -29,9 +32,7 @@ export function createApi(base = "", fetchImpl: typeof fetch = (...args) => fetc
         method,
         headers: body === undefined ? undefined : { "Content-Type": "application/json" },
         body: body === undefined ? undefined : JSON.stringify(body),
-        cache: "no-store",
-        credentials: "omit",
-        referrerPolicy: "no-referrer",
+        ...browserOnly,
       });
     } catch {
       throw new ApiError("network", "Network error");

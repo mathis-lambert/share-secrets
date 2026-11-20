@@ -1,6 +1,6 @@
 # Share Secrets: protocol
 
-> The full client protocol, for agents and tools that cannot run /agent/share.mjs. Read /llms.txt first: its usage policy applies here too. If you can run Node.js, Deno or Bun, use /agent/share.mjs instead of reimplementing this.
+> The full client protocol, for agents and tools that cannot run /agent/share.mjs. Read /llms.txt first: its usage policy applies here too. If you can run Node.js 20+ or Bun, use /agent/share.mjs instead of reimplementing this.
 
 All byte fields on the wire are unpadded base64url. Lengths are in bytes.
 
@@ -58,7 +58,7 @@ Every error is JSON, `{"error": code, "message": text}`:
 | --- | --- | --- |
 | `not_found` | 404 | Unknown, expired, already read or deleted. Final. |
 | `wrong_key` | 403 | Wrong key or passphrase. Counted: after `maxFailedAttempts` the secret is deleted. |
-| `invalid_request` | 400, 422 | Malformed request. |
+| `invalid_request` | 400, 415, 422 | Malformed request; bodies need `Content-Type: application/json`. |
 | `too_large` | 413 | Over the size limit. |
 | `too_many_requests` | 429 | Rate limited. Retry after the `Retry-After` delay. |
 

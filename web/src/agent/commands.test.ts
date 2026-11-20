@@ -57,6 +57,7 @@ describe("agent commands", () => {
     expect(JSON.stringify([...secrets.values()])).not.toContain("s3cr3t");
 
     expect(await info(api, out.link)).toMatchObject({ viewsLeft: 1, passphrase: false });
+    expect(await info(api, out.link.split("#")[0]!)).toMatchObject({ viewsLeft: 1 });
     expect(await reveal(api, out.link)).toEqual({ secret: "s3cr3t", viewsLeft: 0 });
     await expect(reveal(api, out.link)).rejects.toMatchObject({ code: "not_found" });
   });

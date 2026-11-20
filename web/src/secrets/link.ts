@@ -14,16 +14,25 @@ export interface ParsedLink {
   key: Uint8Array;
 }
 
-/** Splits a share link, or throws with a message saying what is wrong. */
-export function parseLink(link: string): ParsedLink {
-  let url: URL;
+function parseUrl(link: string): URL {
   try {
-    url = new URL(link);
+    return new URL(link);
   } catch {
     throw new Error("not a URL");
   }
-  const id = /^\/s\/([^/]+)\/?$/.exec(url.pathname)?.[1];
+}
+
+/** The secret id of a link; the key is not needed for that. */
+export function parseLinkId(link: string): string {
+  const id = /^\/s\/([^/]+)\/?$/.exec(parseUrl(link).pathname)?.[1];
   if (!id || !SECRET_ID.test(id)) throw new Error("not a share link: expected /s/{id}#{key}");
+  return id;
+}
+
+/** Splits a share link, or throws with a message saying what is wrong. */
+export function parseLink(link: string): ParsedLink {
+  const url = parseUrl(link);
+  const id = parseLinkId(link);
   const key = parseLinkKey(url.hash);
   if (!key) throw new Error("the key after # is missing or truncated");
   return { origin: url.origin, id, key };

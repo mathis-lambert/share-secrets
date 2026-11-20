@@ -6,7 +6,7 @@ All paths below are relative to the origin that served this file (the "instance"
 
 ## Use it from an agent
 
-The instance serves a zero-dependency client, built from the same code as its web page. It needs Node.js 20+ (Deno and Bun work too), plus network access to the instance. Nothing to install or configure.
+The instance serves a zero-dependency client, built from the same code as its web page. It needs Node.js 20+ (or Bun), plus network access to the instance. Nothing to install or configure.
 
 ```sh
 curl -fsSL "$INSTANCE/agent/share.mjs" -o share.mjs

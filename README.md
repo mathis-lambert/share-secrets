@@ -112,7 +112,7 @@ Every instance describes itself to agents, with no setup on either side:
 | --- | --- |
 | `/llms.txt` | How to use the instance, and the policy agents must follow ([llmstxt.org](https://llmstxt.org)) |
 | `/openapi.json` | The HTTP API, OpenAPI 3.1 |
-| `/agent/share.mjs` | A readable, zero-dependency client for Node 20+, Deno or Bun, built from the same envelope code as the web page |
+| `/agent/share.mjs` | A readable, zero-dependency client for Node 20+ or Bun, built from the same envelope code as the web page |
 
 Tell your agent *"share this with secrets.example.com"* and it runs:
 

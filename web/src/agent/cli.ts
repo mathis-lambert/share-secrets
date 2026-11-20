@@ -1,11 +1,12 @@
 /// <reference types="node" />
 /**
  * share-secrets agent client: create and open end-to-end encrypted links from
- * a terminal or an AI agent. Zero dependencies; runs on Node 20+, Deno and Bun.
+ * a terminal or an AI agent. Zero dependencies; runs on Node 20+ and Bun.
  * Served by every instance at /agent/share.mjs, built from the same envelope
  * code as the web page. Read /llms.txt on the instance before using it.
  */
 import { ApiError, createApi } from "@/api/client";
+import { concat } from "@/crypto/encoding";
 import { create, info, remove, reveal } from "./commands";
 
 const USAGE = `Usage:
@@ -31,10 +32,12 @@ function parseArgs(argv: string[]): Args {
   for (let i = 0; i < rest.length; i++) {
     const arg = rest[i]!;
     if (arg.startsWith("--")) {
-      const [name, inline] = arg.slice(2).split("=", 2);
-      const value = inline ?? rest[++i];
+      // Split on the first "=" only: values such as URLs may contain more.
+      const eq = arg.indexOf("=");
+      const name = eq === -1 ? arg.slice(2) : arg.slice(2, eq);
+      const value = eq === -1 ? rest[++i] : arg.slice(eq + 1);
       if (value === undefined) throw new Error(`--${name} needs a value`);
-      flags[name!] = value;
+      flags[name] = value;
     } else if (link === undefined) {
       link = arg;
     } else {
@@ -46,10 +49,10 @@ function parseArgs(argv: string[]): Args {
 
 async function readStdin(): Promise<string> {
   if (process.stdin.isTTY) throw new Error("pipe the secret on stdin, e.g. printf '%s' \"$SECRET\" | node share.mjs create ...");
-  const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
-  // `echo` adds one newline; a secret almost never ends with one.
-  return Buffer.concat(chunks).toString("utf8").replace(/\r?\n$/, "");
+  // Taken byte for byte: a trailing newline (PEM keys, files) is part of the secret.
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of process.stdin) chunks.push(chunk as Uint8Array);
+  return new TextDecoder("utf-8", { fatal: true }).decode(concat(...chunks));
 }
 
 function passphrase(flags: Record<string, string>): string | undefined {
