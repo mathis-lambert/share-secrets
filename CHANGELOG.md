@@ -2,6 +2,13 @@
 
 All notable changes are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## 0.2.1
+
+- The interface says it is open source and links to the repository (footer,
+  how-it-works with a "Run your own" section, legal page).
+- The share link stays on one line and scrolls sideways, so the Copy button
+  no longer moves under it.
+
 ## 0.2.0
 
 - AI agents: `/llms.txt` with a usage policy, `/openapi.json` (OpenAPI 3.1),

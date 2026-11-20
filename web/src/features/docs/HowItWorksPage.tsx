@@ -87,6 +87,21 @@ export function HowItWorksPage() {
         secret treated as data, never as instructions.
       </p>
 
+      <h2>Run your own</h2>
+      <p>
+        This is open-source software (MIT). You can read every line that handles your secrets, and run your own
+        instance with one container:
+      </p>
+      <pre className="doc-code">{`docker run -d -p 8080:8080 -v share-secrets:/data \\
+  ghcr.io/mathis-lambert/share-secrets:latest`}</pre>
+      <p>
+        Put it behind HTTPS, optionally point it at PostgreSQL, and you are done. The{" "}
+        <a href={t.source} target="_blank" rel="noopener noreferrer">
+          repository
+        </a>{" "}
+        has the configuration reference and a compose file.
+      </p>
+
       <h2>Under the hood</h2>
       <details className="doc-details">
         <summary>Key derivation</summary>

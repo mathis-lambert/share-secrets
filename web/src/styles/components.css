@@ -539,7 +539,10 @@ input:not([type="checkbox"]):focus {
   padding: 12px 14px;
   font-size: 0.875rem;
   line-height: 1.7;
-  word-break: break-all;
+  /* One line that scrolls sideways: the Copy button stays put beside it. */
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
   user-select: all;
 }
 
