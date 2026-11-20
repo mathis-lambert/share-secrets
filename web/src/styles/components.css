@@ -178,6 +178,15 @@
   display: flex;
 }
 
+/* The overlay sits exactly on the textarea: they share their text metrics. */
+.editor textarea,
+.editor-overlay {
+  padding: 18px 20px;
+  font: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
 .editor textarea {
   flex: 1;
   min-height: 300px;
@@ -185,9 +194,6 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  padding: 18px 20px;
-  font-size: 0.9375rem;
-  line-height: 1.65;
   color: var(--text);
 }
 
@@ -203,12 +209,8 @@
   position: absolute;
   inset: 0;
   margin: 0;
-  padding: 18px 20px;
   overflow: auto;
   background: var(--raised);
-  font: inherit;
-  font-size: 0.9375rem;
-  line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-all;
   color: var(--server);
@@ -256,6 +258,10 @@
 }
 
 .meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
   color: var(--muted);
   font-size: 0.8125rem;
 }
@@ -304,10 +310,6 @@
 .chip[aria-expanded="true"] {
   border-color: var(--line-strong);
   background: var(--inset);
-}
-
-.chip-label {
-  color: var(--faint);
 }
 
 .chip svg {
@@ -469,16 +471,22 @@
   color: var(--danger);
 }
 
-.payload {
-  margin: 0;
+/* Inset code boxes: the payload preview, the link, documentation snippets. */
+.payload,
+.anatomy-link,
+.doc-code {
   padding: 14px 16px;
-  max-height: 50vh;
-  overflow: auto;
   background: var(--inset);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   font: inherit;
   font-size: 0.8125rem;
+}
+
+.payload {
+  margin: 0;
+  max-height: 50vh;
+  overflow: auto;
   color: var(--server);
   white-space: pre-wrap;
   word-break: break-all;
@@ -529,10 +537,6 @@ input:not([type="checkbox"]):focus {
   flex: 1;
   min-width: 0;
   padding: 12px 14px;
-  background: var(--inset);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  font: inherit;
   font-size: 0.875rem;
   line-height: 1.7;
   word-break: break-all;
@@ -571,9 +575,16 @@ input:not([type="checkbox"]):focus {
 }
 
 .anatomy-legend dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.anatomy-legend dt svg {
+  flex-shrink: 0;
 }
 
 .anatomy-legend dd {
@@ -647,6 +658,10 @@ input:not([type="checkbox"]):focus {
 
 .btn-secondary:not(:disabled):hover {
   background: var(--inset);
+}
+
+.btn-icon {
+  padding: 8px;
 }
 
 .btn-quiet {
@@ -762,13 +777,7 @@ input:not([type="checkbox"]):focus {
 
 .doc-code {
   margin: 12px 0;
-  padding: 14px 16px;
   overflow-x: auto;
-  background: var(--inset);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  font: inherit;
-  font-size: 0.8125rem;
   line-height: 1.6;
   white-space: pre;
 }
@@ -975,21 +984,14 @@ input:not([type="checkbox"]):focus {
 
 .nav-link,
 .footer-note,
-.meta,
 .meta-item,
 .wire-title,
 .wire-item,
 .wire-packet,
-.wire-blocked,
-.anatomy-legend dt {
+.wire-blocked {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.meta {
-  flex-wrap: wrap;
-  gap: 16px;
 }
 
 .meta-item svg {
@@ -1003,18 +1005,6 @@ input:not([type="checkbox"]):focus {
 .footer-note svg {
   color: var(--success);
   flex-shrink: 0;
-}
-
-.anatomy-legend dt {
-  display: flex;
-}
-
-.anatomy-legend dt svg {
-  flex-shrink: 0;
-}
-
-.btn-icon {
-  padding: 8px;
 }
 
 /* Tooltips for icon-only controls, from their data-tip. */

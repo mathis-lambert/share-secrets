@@ -48,15 +48,7 @@ async fn serve(config: Config) -> Result<(), Box<dyn std::error::Error>> {
         None => Backend::File(FileStore::open(&config.data_dir)?),
     };
     let backend = store.name();
-    let service = Arc::new(Service::new(
-        store,
-        Limits {
-            max_secret_size: config.max_secret_size,
-            ttl_options: config.ttl_options.clone(),
-            max_views: config.max_views,
-            max_failed_attempts: config.max_failed_attempts,
-        },
-    ));
+    let service = Arc::new(Service::new(store, Limits::from(&config)));
     if !config.static_dir.join("index.html").is_file() {
         tracing::warn!(dir = %config.static_dir.display(), "web client not found");
     }

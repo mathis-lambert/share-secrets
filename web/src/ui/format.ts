@@ -1,6 +1,4 @@
-import { t } from "@/content/strings";
-
-type Unit = "minute" | "hour" | "day";
+import { t, type Unit } from "@/content/strings";
 
 // Thresholds sit a little below each unit so "23 h 59 min left" reads as "1 day".
 function largestUnit(seconds: number): [number, Unit] {

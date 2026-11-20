@@ -9,9 +9,9 @@
 //! GET    /healthz                  liveness
 //! ```
 
-mod b64;
 mod error;
 mod handlers;
+mod json;
 mod middleware;
 
 use std::sync::Arc;
@@ -63,12 +63,9 @@ pub fn router<S: Store>(state: AppState<S>) -> Router {
         api = api.layer(from_fn_with_state(limiter, middleware::rate_limit));
     }
 
-    Router::new()
+    let app = Router::new()
         .route("/healthz", get(handlers::meta::health))
         .nest("/api", api)
-        .fallback_service(web::service(&config.static_dir))
-        .layer(from_fn_with_state(
-            config.hsts,
-            middleware::security_headers,
-        ))
+        .fallback_service(web::service(&config.static_dir));
+    middleware::security_headers(app, config.hsts)
 }

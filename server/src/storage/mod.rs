@@ -23,17 +23,22 @@ pub enum StorageError {
     Conflict,
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    /// A stored record that cannot be decoded; logged, never served.
     #[error("corrupt record: {0}")]
-    Corrupt(#[from] serde_json::Error),
+    Corrupt(String),
     #[error(transparent)]
     Database(#[from] sqlx::Error),
+}
+
+impl From<serde_json::Error> for StorageError {
+    fn from(e: serde_json::Error) -> Self {
+        Self::Corrupt(e.to_string())
+    }
 }
 
 /// What [`Store::update`] does with the secret once the callback returns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
-    /// Leave the stored secret untouched.
-    Keep,
     /// Persist the modified secret.
     Save,
     /// Delete the secret.

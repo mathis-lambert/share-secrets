@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # ── Web client ────────────────────────────────────────────────────────────────
-FROM node:26-alpine AS web
+# Platform-independent output: build it once, on the builder's platform.
+FROM --platform=$BUILDPLATFORM node:26-alpine AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund

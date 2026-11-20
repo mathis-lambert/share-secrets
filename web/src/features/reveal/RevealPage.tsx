@@ -1,11 +1,12 @@
 import { Eye, EyeOff, Flame, Hourglass, Plus, Unlock } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import type { InspectResponse } from "@/api/types";
+import type { SecretInfo } from "@/api/wire";
 import { errorMessage } from "@/app/errors";
 import { Link } from "@/app/router";
 import { t } from "@/content/strings";
 import { Button } from "@/ui/components/Button";
 import { Callout } from "@/ui/components/Callout";
+import { DeadEnd } from "@/ui/components/DeadEnd";
 import { CopyButton } from "@/ui/components/CopyButton";
 import { Dialog } from "@/ui/components/Dialog";
 import { formatExpiry } from "@/ui/format";
@@ -24,10 +25,10 @@ export function RevealPage({ id }: { id: string }) {
       return <Dead message={t.errors.badLink} />;
     case "gone":
       return <Dead message={t.errors.notFound} />;
-    case "failed": {
-      const decrypt = state.error instanceof Error && state.error.message === "decrypt";
-      return <Dead message={decrypt ? t.errors.decrypt : errorMessage(state.error)} />;
-    }
+    case "undecryptable":
+      return <Dead message={t.errors.decrypt} />;
+    case "failed":
+      return <Dead message={errorMessage(state.error)} />;
     case "ready":
       return <Sealed id={id} info={state.info} onReveal={reveal} />;
     case "revealed":
@@ -46,7 +47,7 @@ function SheetHead({ id, right }: { id: string; right: string }) {
   );
 }
 
-function Sealed({ id, info, onReveal }: { id: string; info: InspectResponse; onReveal: (p?: string) => Promise<void> }) {
+function Sealed({ id, info, onReveal }: { id: string; info: SecretInfo; onReveal: (p?: string) => Promise<void> }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -91,7 +92,7 @@ function ConfirmDialog({
   onReveal,
 }: {
   open: boolean;
-  info: InspectResponse;
+  info: SecretInfo;
   onClose: () => void;
   onReveal: (p?: string) => Promise<void>;
 }) {
@@ -146,12 +147,9 @@ function ConfirmDialog({
 }
 
 function Opened({ id, text, viewsLeft }: { id: string; text: string; viewsLeft: number }) {
-  const [settled, setSettled] = useState(false);
   const [hidden, setHidden] = useState(false);
   // Reverse of sealing: the ciphertext noise resolves into the plaintext.
-  const shown = useScramble(noise(id, Math.min(NOISE_LENGTH, Math.max(text.length, 24))), text, true, () =>
-    setSettled(true),
-  );
+  const shown = useScramble(noise(id, Math.min(NOISE_LENGTH, Math.max(text.length, 24))), text, true);
 
   return (
     <>
@@ -166,7 +164,7 @@ function Opened({ id, text, viewsLeft }: { id: string; text: string; viewsLeft: 
               </button>
             ) : (
               <pre className="editor-overlay plaintext" tabIndex={0}>
-                {settled ? text : shown}
+                {shown}
               </pre>
             )}
           </div>
@@ -208,14 +206,8 @@ function Opened({ id, text, viewsLeft }: { id: string; text: string; viewsLeft: 
 
 function Dead({ message }: { message: string }) {
   return (
-    <div className="dead">
-      <pre className="dead-code" aria-hidden="true">
-        404
-      </pre>
+    <DeadEnd>
       <Callout tone="danger">{message}</Callout>
-      <Link to="/" className="btn btn-secondary">
-        {t.nav.new}
-      </Link>
-    </div>
+    </DeadEnd>
   );
 }

@@ -7,6 +7,7 @@ export interface PublicConfig {
   ttlOptions: number[];
   defaultTtl: number;
   maxViews: number;
+  maxFailedAttempts: number;
   legal: {
     publisher: string | null;
     contact: string | null;

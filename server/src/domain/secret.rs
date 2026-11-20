@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use super::SecretId;
+use super::{SecretId, base64url};
 
 /// Public PBKDF2 parameters of an optional passphrase.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Passphrase {
+    #[serde(with = "base64url")]
     pub salt: Vec<u8>,
     pub iterations: u32,
 }
@@ -14,14 +16,17 @@ pub struct Passphrase {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Secret {
-    #[serde(with = "id_serde")]
     pub id: SecretId,
+    #[serde(with = "base64url")]
     pub ciphertext: Vec<u8>,
+    #[serde(with = "base64url")]
     pub iv: Vec<u8>,
     /// HKDF salt.
+    #[serde(with = "base64url")]
     pub salt: Vec<u8>,
     pub passphrase: Option<Passphrase>,
     /// SHA-256 of the client's proof of key.
+    #[serde(with = "base64url")]
     pub auth_hash: Vec<u8>,
     /// Unix seconds.
     pub created_at: u64,
@@ -35,20 +40,24 @@ impl Secret {
     pub fn is_expired(&self, now: u64) -> bool {
         now >= self.expires_at
     }
-}
 
-mod id_serde {
-    use serde::{Deserialize, Deserializer, Serializer, de::Error};
-
-    use super::SecretId;
-
-    pub fn serialize<S: Serializer>(id: &SecretId, s: S) -> Result<S::Ok, S::Error> {
-        s.serialize_str(id.as_str())
-    }
-
-    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<SecretId, D::Error> {
-        let raw = String::deserialize(d)?;
-        raw.parse()
-            .map_err(|()| D::Error::custom("invalid secret id"))
+    /// A valid secret expiring at `expires_at`, for storage tests.
+    #[cfg(test)]
+    pub(crate) fn fixture(expires_at: u64) -> Self {
+        Self {
+            id: SecretId::random(),
+            ciphertext: vec![1; 32],
+            iv: vec![0; super::IV_SIZE],
+            salt: vec![0; super::SALT_SIZE],
+            passphrase: Some(Passphrase {
+                salt: vec![2; super::SALT_SIZE],
+                iterations: 600_000,
+            }),
+            auth_hash: vec![3; 32],
+            created_at: 1,
+            expires_at,
+            views_left: 2,
+            failed_attempts: 0,
+        }
     }
 }

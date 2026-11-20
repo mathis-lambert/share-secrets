@@ -1,5 +1,5 @@
 import { Binary, Lock } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import type { PublicConfig } from "@/api/types";
 import { useConfig } from "@/app/config";
 import { errorMessage } from "@/app/errors";
@@ -9,9 +9,9 @@ import { Callout } from "@/ui/components/Callout";
 import { Dialog } from "@/ui/components/Dialog";
 import { formatBytes, utf8Length } from "@/ui/format";
 import { useScramble } from "@/ui/motion/useScramble";
-import { OptionChips, type Options } from "./OptionChips";
+import { OptionChips } from "./OptionChips";
 import { ShareDialog } from "./ShareDialog";
-import { createSecret, type SharedSecret } from "./createSecret";
+import { createSecret, defaultOptions, type Options, type SharedSecret } from "./createSecret";
 import { useCipherPreview } from "./useCipherPreview";
 
 export function CreatePage() {
@@ -23,12 +23,12 @@ type Phase = { name: "editing" } | { name: "sealing"; secret: SharedSecret } | {
 
 function Workspace({ config }: { config: PublicConfig }) {
   const [text, setText] = useState("");
-  const [options, setOptions] = useState<Options>({ ttl: config.defaultTtl, views: 1, passphrase: "" });
+  const [options, setOptions] = useState<Options>(() => defaultOptions(config));
   const [phase, setPhase] = useState<Phase>({ name: "editing" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inspecting, setInspecting] = useState(false);
-  const preview = useCipherPreview(text);
+  const preview = useCipherPreview(text, options);
 
   const sealing = phase.name === "sealing" ? phase.secret : null;
   // The signature moment: the plaintext turns into the ciphertext that was uploaded.
@@ -36,7 +36,7 @@ function Workspace({ config }: { config: PublicConfig }) {
     if (sealing) setPhase({ name: "shared", secret: sealing });
   });
 
-  const size = utf8Length(text);
+  const size = useMemo(() => utf8Length(text), [text]);
   const tooLarge = size > config.maxSecretSize;
   const canSubmit = text.trim().length > 0 && !tooLarge && phase.name === "editing";
 
@@ -46,7 +46,7 @@ function Workspace({ config }: { config: PublicConfig }) {
     setBusy(true);
     setError(null);
     try {
-      const secret = await createSecret({ text, ttl: options.ttl, views: options.views, passphrase: options.passphrase });
+      const secret = await createSecret(text, options);
       setPhase({ name: "sealing", secret });
     } catch (err) {
       setError(errorMessage(err));
@@ -57,7 +57,7 @@ function Workspace({ config }: { config: PublicConfig }) {
 
   function reset() {
     setText("");
-    setOptions({ ttl: config.defaultTtl, views: 1, passphrase: "" });
+    setOptions(defaultOptions(config));
     setPhase({ name: "editing" });
   }
 
@@ -121,7 +121,7 @@ function Workspace({ config }: { config: PublicConfig }) {
           <p className="muted">{t.create.inspectHelp}</p>
           <pre className="payload">
             {preview
-              ? JSON.stringify({ ...preview, passphrase: options.passphrase ? "{ salt, iterations }" : null, ttl: options.ttl, views: options.views }, null, 2)
+              ? JSON.stringify({ ...preview, passphrase: options.passphrase ? "{ salt, iterations }" : null }, null, 2)
               : t.create.inspectEmpty}
           </pre>
         </div>

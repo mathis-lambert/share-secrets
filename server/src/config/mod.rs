@@ -4,7 +4,8 @@ mod duration;
 
 use std::{net::SocketAddr, path::PathBuf, time::Duration};
 
-pub use duration::{format_duration, parse_duration};
+pub use duration::format_duration;
+use duration::parse_duration;
 
 #[derive(Debug, thiserror::Error)]
 #[error("{key}: {reason}")]
@@ -21,7 +22,7 @@ fn err(key: &'static str, reason: impl Into<String>) -> ConfigError {
 }
 
 /// Legal notice details, displayed as given.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Legal {
     pub publisher: Option<String>,
     pub contact: Option<String>,

@@ -81,25 +81,40 @@ export async function deriveKeys(
   return { encKey, auth };
 }
 
-/** Encrypts `plaintext` under a fresh random key. */
-export async function seal(plaintext: string, passphrase?: string): Promise<Sealed> {
+/** A fresh random key, ready to encrypt with. */
+export interface SealingKey extends DerivedKeys {
+  /** Goes in the link fragment. */
+  linkKey: string;
+  salt: Uint8Array<ArrayBuffer>;
+  passphrase: PassphraseParams | null;
+}
+
+export async function newKey(passphrase?: string): Promise<SealingKey> {
   const linkKey = randomBytes(KEY_BYTES);
   const salt = randomBytes(SALT_BYTES);
-  const params = passphrase ? { salt: randomBytes(SALT_BYTES), iterations: PBKDF2_ITERATIONS } : null;
-  const { encKey, auth } = await deriveKeys(
-    linkKey,
-    salt,
-    params && passphrase ? { value: passphrase, params } : undefined,
-  );
+  const stretched = passphrase
+    ? { value: passphrase, params: { salt: randomBytes(SALT_BYTES), iterations: PBKDF2_ITERATIONS } }
+    : undefined;
+  const keys = await deriveKeys(linkKey, salt, stretched);
+  return { ...keys, linkKey: toBase64Url(linkKey), salt, passphrase: stretched?.params ?? null };
+}
+
+/** Encrypts `plaintext` under `key`, with a fresh IV. */
+export async function encrypt(key: SealingKey, plaintext: string): Promise<Sealed> {
   const iv = randomBytes(IV_BYTES);
   const ciphertext = new Uint8Array(
     await crypto.subtle.encrypt(
       { name: "AES-GCM", iv, additionalData: AAD },
-      encKey,
+      key.encKey,
       new TextEncoder().encode(plaintext),
     ),
   );
-  return { linkKey: toBase64Url(linkKey), ciphertext, iv, salt, passphrase: params, auth };
+  return { linkKey: key.linkKey, ciphertext, iv, salt: key.salt, passphrase: key.passphrase, auth: key.auth };
+}
+
+/** Encrypts `plaintext` under a fresh random key. */
+export async function seal(plaintext: string, passphrase?: string): Promise<Sealed> {
+  return encrypt(await newKey(passphrase), plaintext);
 }
 
 /** Decrypts a sealed secret; throws if the key is wrong or data was altered. */

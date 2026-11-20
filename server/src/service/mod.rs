@@ -15,6 +15,7 @@ pub use error::ServiceError;
 pub use input::NewSecret;
 
 use crate::{
+    config::Config,
     domain::{Passphrase, Secret, SecretId},
     storage::{Action, StorageError, Store},
 };
@@ -26,6 +27,17 @@ pub struct Limits {
     pub ttl_options: Vec<Duration>,
     pub max_views: u32,
     pub max_failed_attempts: u32,
+}
+
+impl From<&Config> for Limits {
+    fn from(c: &Config) -> Self {
+        Self {
+            max_secret_size: c.max_secret_size,
+            ttl_options: c.ttl_options.clone(),
+            max_views: c.max_views,
+            max_failed_attempts: c.max_failed_attempts,
+        }
+    }
 }
 
 type Clock = Arc<dyn Fn() -> u64 + Send + Sync>;
@@ -83,10 +95,6 @@ impl<S: Store> Service<S> {
         }
     }
 
-    pub fn limits(&self) -> &Limits {
-        &self.limits
-    }
-
     pub async fn create(&self, input: NewSecret) -> Result<Created, ServiceError> {
         input.validate(&self.limits)?;
         let now = (self.clock)();
@@ -136,8 +144,14 @@ impl<S: Store> Service<S> {
                 } else {
                     Action::Save
                 };
+                // The last read deletes the record: move the bytes out instead of copying.
+                let ciphertext = if action == Action::Remove {
+                    std::mem::take(&mut secret.ciphertext)
+                } else {
+                    secret.ciphertext.clone()
+                };
                 let revealed = Revealed {
-                    ciphertext: secret.ciphertext.clone(),
+                    ciphertext,
                     iv: secret.iv.clone(),
                     views_left: secret.views_left,
                 };

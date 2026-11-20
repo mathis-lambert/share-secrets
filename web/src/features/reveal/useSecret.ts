@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, api } from "@/api/client";
-import type { InspectResponse } from "@/api/types";
-import { fromBase64Url, toBase64Url } from "@/crypto/encoding";
+import type { SecretInfo } from "@/api/wire";
 import { deriveKeys, open, parseLinkKey } from "@/crypto/envelope";
 
 export type RevealState =
   | { step: "loading" }
   | { step: "badLink" }
   | { step: "gone" }
-  | { step: "ready"; info: InspectResponse }
+  | { step: "ready"; info: SecretInfo }
   | { step: "revealed"; text: string; viewsLeft: number }
+  /** The server accepted the key but the ciphertext does not decrypt. */
+  | { step: "undecryptable" }
   | { step: "failed"; error: unknown };
+
+const isGone = (error: unknown) => error instanceof ApiError && error.code === "not_found";
 
 /**
  * Drives the recipient side: inspect (consumes nothing), then on demand
@@ -29,10 +32,7 @@ export function useSecret(id: string) {
     let cancelled = false;
     api.inspect(id).then(
       (info) => !cancelled && setState({ step: "ready", info }),
-      (error) => {
-        if (cancelled) return;
-        setState(error instanceof ApiError && error.code === "not_found" ? { step: "gone" } : { step: "failed", error });
-      },
+      (error) => !cancelled && setState(isGone(error) ? { step: "gone" } : { step: "failed", error }),
     );
     return () => {
       cancelled = true;
@@ -44,32 +44,23 @@ export function useSecret(id: string) {
     async (passphrase?: string) => {
       if (state.step !== "ready" || !linkKey) return;
       const { info } = state;
-      const params = info.passphrase && {
-        salt: fromBase64Url(info.passphrase.salt),
-        iterations: info.passphrase.iterations,
-      };
-      const keys = await deriveKeys(
-        linkKey,
-        fromBase64Url(info.salt),
-        params && passphrase !== undefined ? { value: passphrase, params } : undefined,
-      );
+      const stretched = info.passphrase ? { value: passphrase ?? "", params: info.passphrase } : undefined;
+      const keys = await deriveKeys(linkKey, info.salt, stretched);
       let out;
       try {
-        out = await api.reveal(id, toBase64Url(keys.auth));
+        out = await api.reveal(id, keys.auth);
       } catch (error) {
-        if (error instanceof ApiError && error.code === "not_found") {
-          setState({ step: "gone" });
-          return;
-        }
-        throw error;
+        if (!isGone(error)) throw error;
+        setState({ step: "gone" });
+        return;
       }
       try {
-        const text = await open(keys.encKey, fromBase64Url(out.ciphertext), fromBase64Url(out.iv));
+        const text = await open(keys.encKey, out.ciphertext, out.iv);
         // Drop the key from the address bar now that it served its purpose.
         window.history.replaceState(null, "", window.location.pathname);
         setState({ step: "revealed", text, viewsLeft: out.viewsLeft });
       } catch {
-        setState({ step: "failed", error: new Error("decrypt") });
+        setState({ step: "undecryptable" });
       }
     },
     [id, linkKey, state],

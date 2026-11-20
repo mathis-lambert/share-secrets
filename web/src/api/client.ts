@@ -6,6 +6,7 @@ import type {
   PublicConfig,
   RevealResponse,
 } from "./types";
+import { decodeInfo, decodeRevealed, encodeAuth } from "./wire";
 
 export class ApiError extends Error {
   constructor(
@@ -33,9 +34,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    const code: ErrorCode =
-      res.status === 413 ? "too_large" : ((data?.error as ErrorCode | undefined) ?? "internal");
-    throw new ApiError(code, data?.message ?? res.statusText);
+    throw new ApiError((data?.error as ErrorCode | undefined) ?? "internal", data?.message ?? res.statusText);
   }
   return data as T;
 }
@@ -45,8 +44,8 @@ const secretPath = (id: string) => `/api/secrets/${encodeURIComponent(id)}`;
 export const api = {
   config: () => request<PublicConfig>("GET", "/api/config"),
   create: (body: CreateRequest) => request<CreateResponse>("POST", "/api/secrets", body),
-  inspect: (id: string) => request<InspectResponse>("GET", secretPath(id)),
-  reveal: (id: string, auth: string) =>
-    request<RevealResponse>("POST", `${secretPath(id)}/reveal`, { auth }),
-  destroy: (id: string, auth: string) => request<void>("DELETE", secretPath(id), { auth }),
+  inspect: async (id: string) => decodeInfo(await request<InspectResponse>("GET", secretPath(id))),
+  reveal: async (id: string, auth: Uint8Array) =>
+    decodeRevealed(await request<RevealResponse>("POST", `${secretPath(id)}/reveal`, encodeAuth(auth))),
+  destroy: (id: string, auth: Uint8Array) => request<void>("DELETE", secretPath(id), encodeAuth(auth)),
 };

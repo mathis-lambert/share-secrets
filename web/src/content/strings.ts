@@ -1,6 +1,6 @@
-/** Every user-facing string, in one place. */
+/** Interface strings shared across screens. Long-form pages keep their prose inline. */
 
-type Unit = "minute" | "hour" | "day";
+export type Unit = "minute" | "hour" | "day";
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 export const t = {
@@ -76,7 +76,9 @@ export const t = {
   },
 
   copy: { copy: "Copy", copied: "Copied" },
-  notFound: { title: "404", help: "Nothing at this address." },
+  notFound: { help: "Nothing at this address." },
+  dialog: { close: "Close", closeHint: "Close (esc)" },
+  legal: { notProvided: "Not provided by the operator." },
 
   time: {
     in: (n: number, unit: Unit) => `in ${plural(n, unit)}`,
