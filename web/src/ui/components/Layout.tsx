@@ -1,4 +1,4 @@
-import { BookOpen, Bot, Scale, ShieldCheck } from "lucide-react";
+import { BookOpen, Bot, GitFork, Scale, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useConfig } from "@/app/config";
 import { Link } from "@/app/router";
@@ -30,6 +30,10 @@ export function Layout({ children }: { children: ReactNode }) {
           {t.footer}
         </span>
         <span className="footer-links">
+          <a href={t.source} className="nav-link" target="_blank" rel="noopener noreferrer">
+            <GitFork size={14} aria-hidden="true" />
+            {t.nav.source}
+          </a>
           {/* A plain file, not a page of the app. */}
           <a href="/llms.txt" className="nav-link">
             <Bot size={14} aria-hidden="true" />

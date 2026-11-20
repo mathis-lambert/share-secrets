@@ -77,7 +77,13 @@ export function LegalPage() {
       </p>
 
       <h2>Software</h2>
-      <p>Open-source software under the MIT license.</p>
+      <p>
+        Open-source software under the MIT license. Read the code or run your own instance from{" "}
+        <a href={t.source} target="_blank" rel="noopener noreferrer">
+          the repository
+        </a>
+        .
+      </p>
     </article>
   );
 }

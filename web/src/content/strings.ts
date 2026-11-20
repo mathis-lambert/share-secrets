@@ -4,7 +4,9 @@ export type Unit = "minute" | "hour" | "day";
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 export const t = {
-  nav: { new: "New secret", how: "How it works", legal: "Legal", agents: "For agents" },
+  nav: { new: "New secret", how: "How it works", legal: "Legal", agents: "For agents", source: "Open source" },
+  /** The upstream project, so anyone can audit it or run their own instance. */
+  source: "https://github.com/mathis-lambert/share-secrets",
   footer: "Encrypted in your browser. The key never reaches the server.",
 
   create: {
