@@ -1007,6 +1007,12 @@ input:not([type="checkbox"]):focus {
   flex-shrink: 0;
 }
 
+.footer-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
 /* Tooltips for icon-only controls, from their data-tip. */
 [data-tip] {
   position: relative;

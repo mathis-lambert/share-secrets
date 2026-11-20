@@ -1,0 +1,65 @@
+# Share Secrets: protocol
+
+> The full client protocol, for agents and tools that cannot run /agent/share.mjs. Read /llms.txt first: its usage policy applies here too. If you can run Node.js 20+ or Bun, use /agent/share.mjs instead of reimplementing this.
+
+All byte fields on the wire are unpadded base64url. Lengths are in bytes.
+
+## Link format
+
+```
+https://<instance>/s/<id>#<linkKey>
+```
+
+- `id`: 16 characters `[A-Za-z0-9_-]`, assigned by the server.
+- `linkKey`: 32 random bytes, base64url (43 characters). It lives in the URL fragment, which HTTP clients never send. Never send it to any server or tool.
+
+## Key derivation
+
+```
+passKey = PBKDF2-HMAC-SHA256(NFC(passphrase), pSalt, iterations, 32 bytes)   only with a passphrase
+ikm     = linkKey || passKey                                              linkKey alone without one
+encKey  = HKDF-SHA256(ikm, salt, info = "share-secrets/v1/encrypt", 32 bytes)   AES-256-GCM key
+auth    = HKDF-SHA256(ikm, salt, info = "share-secrets/v1/auth",    32 bytes)   proof of key
+```
+
+Encryption: AES-256-GCM, 12-byte random IV, additional data `share-secrets/v1`, plaintext UTF-8. The ciphertext includes the 16-byte tag.
+
+## Create
+
+1. `GET /api/config` gives `ttlOptions` (seconds), `defaultTtl`, `maxViews` and `maxSecretSize`.
+2. Draw `linkKey` (32), `salt` (16), `iv` (12). With a passphrase, also draw `pSalt` (16) and use 600000 iterations.
+3. Derive `encKey` and `auth`, then encrypt.
+4. Send:
+
+   ```
+   POST /api/secrets
+   {"ciphertext", "iv", "salt", "passphrase": {"salt": pSalt, "iterations"} | null, "auth", "ttl", "views"}
+   → 201 {"id", "expiresAt"}
+   ```
+
+5. The link is `https://<instance>/s/<id>#<base64url(linkKey)>`.
+
+## Read
+
+1. `GET /api/secrets/<id>` returns `{"salt", "passphrase", "expiresAt", "viewsLeft"}`. It consumes nothing.
+2. Derive `encKey` and `auth` from `linkKey`, `salt` and, if `passphrase` is not null, the user's passphrase.
+3. `POST /api/secrets/<id>/reveal {"auth"}` returns `{"ciphertext", "iv", "viewsLeft"}`. This consumes one read, and the last one deletes the secret.
+4. Decrypt locally. A tag failure means the link is damaged.
+
+## Delete
+
+`DELETE /api/secrets/<id> {"auth"}` returns `204`.
+
+## Errors
+
+Every error is JSON, `{"error": code, "message": text}`:
+
+| Code | HTTP | Meaning |
+| --- | --- | --- |
+| `not_found` | 404 | Unknown, expired, already read or deleted. Final. |
+| `wrong_key` | 403 | Wrong key or passphrase. Counted: after `maxFailedAttempts` the secret is deleted. |
+| `invalid_request` | 400, 415, 422 | Malformed request; bodies need `Content-Type: application/json`. |
+| `too_large` | 413 | Over the size limit. |
+| `too_many_requests` | 429 | Rate limited. Retry after the `Retry-After` delay. |
+
+The full schema is at /openapi.json.

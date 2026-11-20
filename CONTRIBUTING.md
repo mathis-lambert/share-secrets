@@ -33,7 +33,7 @@ make lint test
 
 ## Releasing
 
-1. Bump the version in `server/Cargo.toml` and `web/package.json`.
+1. Bump the version in `server/Cargo.toml`, `web/package.json` and `web/public/openapi.json`.
 2. Update `CHANGELOG.md`.
 3. Publish a GitHub release tagged `vX.Y.Z`. The release workflow builds and
    pushes `ghcr.io/mathis-lambert/share-secrets` for amd64 and arm64.

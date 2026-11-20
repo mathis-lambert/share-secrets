@@ -29,6 +29,8 @@ jobs:
             || { echo "server/Cargo.toml is not at $version" >&2; exit 1; }
           test "$(jq -r .version web/package.json)" = "$version" \
             || { echo "web/package.json is not at $version" >&2; exit 1; }
+          test "$(jq -r .info.version web/public/openapi.json)" = "$version" \
+            || { echo "web/public/openapi.json is not at $version" >&2; exit 1; }
 
   build:
     needs: verify

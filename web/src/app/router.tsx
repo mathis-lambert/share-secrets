@@ -7,6 +7,7 @@
  *   /legal         legal notice and privacy
  */
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { SECRET_ID } from "@/secrets/link";
 
 export type Route =
   | { name: "create" }
@@ -15,14 +16,14 @@ export type Route =
   | { name: "legal" }
   | { name: "notFound" };
 
-const SECRET_PATH = /^\/s\/([A-Za-z0-9_-]{16})\/?$/;
+const SECRET_PATH = /^\/s\/([^/]+)\/?$/;
 
 export function matchRoute(pathname: string): Route {
   if (pathname === "/" || pathname === "/index.html") return { name: "create" };
   if (pathname === "/how-it-works") return { name: "how" };
   if (pathname === "/legal") return { name: "legal" };
-  const m = SECRET_PATH.exec(pathname);
-  if (m?.[1]) return { name: "reveal", id: m[1] };
+  const id = SECRET_PATH.exec(pathname)?.[1];
+  if (id && SECRET_ID.test(id)) return { name: "reveal", id };
   return { name: "notFound" };
 }
 

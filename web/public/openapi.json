@@ -1,0 +1,460 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Share Secrets API",
+    "version": "0.2.0",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    },
+    "description": "End-to-end encrypted, self-destructing secret links. Clients encrypt before calling this API: the server only stores ciphertext and never receives the key, which lives in the link fragment. The envelope is AES-256-GCM with keys derived by HKDF-SHA256 (full protocol in /llms-full.txt). Agents should use the client at /agent/share.mjs and follow the policy in /llms.txt. Byte fields are unpadded base64url strings."
+  },
+  "paths": {
+    "/api/config": {
+      "get": {
+        "operationId": "getConfig",
+        "summary": "Public settings of this instance",
+        "responses": {
+          "200": {
+            "description": "Settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secrets": {
+      "post": {
+        "operationId": "createSecret",
+        "summary": "Store an encrypted secret",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/secrets/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "operationId": "inspectSecret",
+        "summary": "Key-derivation parameters; consumes nothing",
+        "responses": {
+          "200": {
+            "description": "Public parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Info"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSecret",
+        "summary": "Delete a secret; requires the proof of key",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Auth"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/secrets/{id}/reveal": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "operationId": "revealSecret",
+        "summary": "Prove the key, consume one read, get the ciphertext",
+        "description": "The last allowed read deletes the secret. Wrong proofs are counted and the secret is deleted after maxFailedAttempts of them.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Auth"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ciphertext",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Revealed"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "health",
+        "summary": "Liveness",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "const": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{16}$"
+        }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "B64": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]*$",
+        "description": "Unpadded base64url"
+      },
+      "Passphrase": {
+        "type": "object",
+        "required": [
+          "salt",
+          "iterations"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "salt": {
+            "$ref": "#/components/schemas/B64",
+            "description": "16 bytes"
+          },
+          "iterations": {
+            "type": "integer",
+            "minimum": 100000,
+            "maximum": 5000000
+          }
+        }
+      },
+      "Config": {
+        "type": "object",
+        "required": [
+          "siteName",
+          "maxSecretSize",
+          "ttlOptions",
+          "defaultTtl",
+          "maxViews",
+          "maxFailedAttempts",
+          "legal"
+        ],
+        "properties": {
+          "siteName": {
+            "type": "string"
+          },
+          "maxSecretSize": {
+            "type": "integer",
+            "description": "Plaintext bytes"
+          },
+          "ttlOptions": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Allowed lifetimes, in seconds"
+          },
+          "defaultTtl": {
+            "type": "integer"
+          },
+          "maxViews": {
+            "type": "integer"
+          },
+          "maxFailedAttempts": {
+            "type": "integer"
+          },
+          "legal": {
+            "type": "object",
+            "properties": {
+              "publisher": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "contact": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hosting": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "CreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ciphertext",
+          "iv",
+          "salt",
+          "passphrase",
+          "auth",
+          "ttl",
+          "views"
+        ],
+        "properties": {
+          "ciphertext": {
+            "$ref": "#/components/schemas/B64",
+            "description": "AES-256-GCM output, tag included"
+          },
+          "iv": {
+            "$ref": "#/components/schemas/B64",
+            "description": "12 bytes"
+          },
+          "salt": {
+            "$ref": "#/components/schemas/B64",
+            "description": "HKDF salt, 16 bytes"
+          },
+          "passphrase": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Passphrase"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "auth": {
+            "$ref": "#/components/schemas/B64",
+            "description": "Proof of key, 32 bytes; only its SHA-256 is stored"
+          },
+          "ttl": {
+            "type": "integer",
+            "description": "Seconds; one of ttlOptions"
+          },
+          "views": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "CreateResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "expiresAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "description": "Unix seconds"
+          }
+        }
+      },
+      "Info": {
+        "type": "object",
+        "required": [
+          "salt",
+          "passphrase",
+          "expiresAt",
+          "viewsLeft"
+        ],
+        "properties": {
+          "salt": {
+            "$ref": "#/components/schemas/B64"
+          },
+          "passphrase": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Passphrase"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiresAt": {
+            "type": "integer"
+          },
+          "viewsLeft": {
+            "type": "integer"
+          }
+        }
+      },
+      "Auth": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "auth"
+        ],
+        "properties": {
+          "auth": {
+            "$ref": "#/components/schemas/B64"
+          }
+        }
+      },
+      "Revealed": {
+        "type": "object",
+        "required": [
+          "ciphertext",
+          "iv",
+          "viewsLeft"
+        ],
+        "properties": {
+          "ciphertext": {
+            "$ref": "#/components/schemas/B64"
+          },
+          "iv": {
+            "$ref": "#/components/schemas/B64"
+          },
+          "viewsLeft": {
+            "type": "integer"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "invalid_request",
+              "not_found",
+              "wrong_key",
+              "too_many_requests",
+              "too_large",
+              "internal"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

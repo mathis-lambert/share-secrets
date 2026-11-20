@@ -4,7 +4,7 @@ export type Unit = "minute" | "hour" | "day";
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 export const t = {
-  nav: { new: "New secret", how: "How it works", legal: "Legal" },
+  nav: { new: "New secret", how: "How it works", legal: "Legal", agents: "For agents" },
   footer: "Encrypted in your browser. The key never reaches the server.",
 
   create: {

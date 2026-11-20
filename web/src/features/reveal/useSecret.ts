@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, api } from "@/api/client";
 import type { SecretInfo } from "@/api/wire";
-import { deriveKeys, open, parseLinkKey } from "@/crypto/envelope";
+import { parseLinkKey } from "@/crypto/envelope";
+import { keysFor, revealSecret, UndecryptableError } from "@/secrets/open";
 
 export type RevealState =
   | { step: "loading" }
@@ -43,24 +44,16 @@ export function useSecret(id: string) {
   const reveal = useCallback(
     async (passphrase?: string) => {
       if (state.step !== "ready" || !linkKey) return;
-      const { info } = state;
-      const stretched = info.passphrase ? { value: passphrase ?? "", params: info.passphrase } : undefined;
-      const keys = await deriveKeys(linkKey, info.salt, stretched);
-      let out;
+      const keys = await keysFor(state.info, linkKey, passphrase);
       try {
-        out = await api.reveal(id, keys.auth);
-      } catch (error) {
-        if (!isGone(error)) throw error;
-        setState({ step: "gone" });
-        return;
-      }
-      try {
-        const text = await open(keys.encKey, out.ciphertext, out.iv);
+        const { text, viewsLeft } = await revealSecret(api, id, keys);
         // Drop the key from the address bar now that it served its purpose.
         window.history.replaceState(null, "", window.location.pathname);
-        setState({ step: "revealed", text, viewsLeft: out.viewsLeft });
-      } catch {
-        setState({ step: "undecryptable" });
+        setState({ step: "revealed", text, viewsLeft });
+      } catch (error) {
+        if (isGone(error)) setState({ step: "gone" });
+        else if (error instanceof UndecryptableError) setState({ step: "undecryptable" });
+        else throw error;
       }
     },
     [id, linkKey, state],
