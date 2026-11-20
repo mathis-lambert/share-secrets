@@ -2,6 +2,8 @@
 
 use std::sync::Arc;
 
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+
 use axum::{
     Router,
     body::Body,
@@ -11,16 +13,17 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use share_secrets::{
     config::Config,
+    domain::{AUTH_SIZE, IV_SIZE, SALT_SIZE},
     http::{AppState, router},
     service::{Limits, Service},
     storage::FileStore,
 };
 use tower::ServiceExt;
 
-const B64_32: &str = "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"; // 32 × 0x07
-const B64_16: &str = "AAAAAAAAAAAAAAAAAAAAAA";
-const B64_12: &str = "AAAAAAAAAAAAAAAA";
-const CIPHERTEXT: &str = "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB"; // 24 bytes
+/// Unpadded base64url of `len` copies of `byte`, as the client sends it.
+fn b64(byte: u8, len: usize) -> String {
+    URL_SAFE_NO_PAD.encode(vec![byte; len])
+}
 
 fn app(dir: &tempfile::TempDir) -> Router {
     let config = Config::from_lookup(|k| match k {
@@ -32,12 +35,7 @@ fn app(dir: &tempfile::TempDir) -> Router {
     .unwrap();
     let service = Service::new(
         FileStore::open(&config.data_dir).unwrap(),
-        Limits {
-            max_secret_size: config.max_secret_size,
-            ttl_options: config.ttl_options.clone(),
-            max_views: config.max_views,
-            max_failed_attempts: config.max_failed_attempts,
-        },
+        Limits::from(&config),
     );
     router(AppState {
         service: Arc::new(service),
@@ -65,14 +63,15 @@ async fn call(app: &Router, method: &str, uri: &str, body: Option<Value>) -> (St
 async fn create_inspect_reveal_burn() {
     let dir = tempfile::tempdir().unwrap();
     let app = app(&dir);
+    let (ciphertext, auth) = (b64(1, 24), b64(7, AUTH_SIZE));
 
     let (status, created) = call(
         &app,
         "POST",
         "/api/secrets",
         Some(json!({
-            "ciphertext": CIPHERTEXT, "iv": B64_12, "salt": B64_16,
-            "passphrase": null, "auth": B64_32, "ttl": 3600, "views": 1
+            "ciphertext": ciphertext, "iv": b64(0, IV_SIZE), "salt": b64(0, SALT_SIZE),
+            "passphrase": null, "auth": auth, "ttl": 3600, "views": 1
         })),
     )
     .await;
@@ -84,17 +83,23 @@ async fn create_inspect_reveal_burn() {
     assert_eq!(info["viewsLeft"], 1);
 
     let reveal = format!("/api/secrets/{id}/reveal");
-    let (status, err) = call(&app, "POST", &reveal, Some(json!({ "auth": B64_16 }))).await;
+    let (status, err) = call(
+        &app,
+        "POST",
+        &reveal,
+        Some(json!({ "auth": b64(9, AUTH_SIZE) })),
+    )
+    .await;
     assert_eq!(
         (status, err["error"].as_str()),
         (StatusCode::FORBIDDEN, Some("wrong_key"))
     );
 
-    let (status, out) = call(&app, "POST", &reveal, Some(json!({ "auth": B64_32 }))).await;
+    let (status, out) = call(&app, "POST", &reveal, Some(json!({ "auth": auth }))).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(out["ciphertext"], CIPHERTEXT);
+    assert_eq!(out["ciphertext"], ciphertext);
 
-    let (status, _) = call(&app, "POST", &reveal, Some(json!({ "auth": B64_32 }))).await;
+    let (status, _) = call(&app, "POST", &reveal, Some(json!({ "auth": auth }))).await;
     assert_eq!(
         status,
         StatusCode::NOT_FOUND,
@@ -107,8 +112,14 @@ async fn rejects_bad_requests() {
     let dir = tempfile::tempdir().unwrap();
     let app = app(&dir);
 
-    let (status, _) = call(&app, "POST", "/api/secrets", Some(json!({ "nope": 1 }))).await;
-    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let (status, err) = call(&app, "POST", "/api/secrets", Some(json!({ "nope": 1 }))).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(err["error"], "invalid_request");
+
+    let huge = json!({ "ciphertext": "A".repeat(200_000) });
+    let (status, err) = call(&app, "POST", "/api/secrets", Some(huge)).await;
+    assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+    assert_eq!(err["error"], "too_large");
 
     let (status, _) = call(&app, "GET", "/api/secrets/..%2F..%2Fetc", None).await;
     assert_eq!(status, StatusCode::NOT_FOUND);

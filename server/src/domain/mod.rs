@@ -1,5 +1,6 @@
 //! The stored secret and the sizes fixed by the client-side envelope.
 
+pub mod base64url;
 mod id;
 mod secret;
 

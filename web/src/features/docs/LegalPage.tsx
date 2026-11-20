@@ -1,5 +1,6 @@
 import { useConfig } from "@/app/config";
 import { Link } from "@/app/router";
+import { t } from "@/content/strings";
 
 /** Legal notice and privacy. Operator details come from the server settings. */
 export function LegalPage() {
@@ -15,7 +16,7 @@ export function LegalPage() {
       <dl className="doc-facts">
         <div>
           <dt>Publisher</dt>
-          <dd>{legal?.publisher ?? "Not provided by the operator."}</dd>
+          <dd>{legal?.publisher ?? t.legal.notProvided}</dd>
         </div>
         <div>
           <dt>Contact</dt>
@@ -27,13 +28,13 @@ export function LegalPage() {
                 legal.contact
               )
             ) : (
-              "Not provided by the operator."
+              t.legal.notProvided
             )}
           </dd>
         </div>
         <div>
           <dt>Hosting</dt>
-          <dd>{legal?.hosting ?? "Not provided by the operator."}</dd>
+          <dd>{legal?.hosting ?? t.legal.notProvided}</dd>
         </div>
       </dl>
 

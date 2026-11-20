@@ -2,7 +2,8 @@
 //!
 //! Unknown paths fall back to `index.html` so the client routes `/s/{id}`
 //! itself. Fingerprinted files under `/assets/` are cached for a year; the
-//! rest must be revalidated so a release is picked up at once.
+//! rest must be revalidated so a release is picked up at once. Responses are
+//! compressed (brotli or gzip) when the browser accepts it.
 
 use std::{convert::Infallible, path::Path};
 
@@ -13,7 +14,10 @@ use axum::{
     routing::{MethodRouter, any_service},
 };
 use tower::ServiceExt;
-use tower_http::services::{ServeDir, ServeFile};
+use tower_http::{
+    compression::CompressionLayer,
+    services::{ServeDir, ServeFile},
+};
 
 pub fn service(dir: &Path) -> MethodRouter {
     let files = ServeDir::new(dir)
@@ -38,4 +42,6 @@ pub fn service(dir: &Path) -> MethodRouter {
             Ok(res)
         }
     }))
+    // Only static files: API payloads are ciphertext, which does not compress.
+    .layer(CompressionLayer::new())
 }

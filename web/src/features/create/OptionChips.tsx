@@ -5,14 +5,9 @@ import { t } from "@/content/strings";
 import { Button } from "@/ui/components/Button";
 import { ChoiceList, Popover } from "@/ui/components/Popover";
 import { formatDuration } from "@/ui/format";
+import { defaultOptions, type Options } from "./createSecret";
 
 const VIEW_CHOICES = [1, 2, 3, 5, 10, 25, 50, 100];
-
-export interface Options {
-  ttl: number;
-  views: number;
-  passphrase: string;
-}
 
 interface Props {
   config: PublicConfig;
@@ -23,10 +18,11 @@ interface Props {
 /** Expiry, reads and passphrase, each folded into a chip. */
 export function OptionChips({ config, value, onChange }: Props) {
   const set = (patch: Partial<Options>) => onChange({ ...value, ...patch });
+  const defaults = defaultOptions(config);
 
   return (
     <div className="chips">
-      <Popover label={t.create.expires} icon={Timer} value={formatDuration(value.ttl)} active={value.ttl !== config.defaultTtl}>
+      <Popover label={t.create.expires} icon={Timer} value={formatDuration(value.ttl)} active={value.ttl !== defaults.ttl}>
         {(close) => (
           <ChoiceList
             options={config.ttlOptions}
@@ -39,7 +35,7 @@ export function OptionChips({ config, value, onChange }: Props) {
           />
         )}
       </Popover>
-      <Popover label={t.create.reads} icon={Eye} value={t.create.readsValue(value.views)} active={value.views !== 1}>
+      <Popover label={t.create.reads} icon={Eye} value={t.create.readsValue(value.views)} active={value.views !== defaults.views}>
         {(close) => (
           <ChoiceList
             options={VIEW_CHOICES.filter((n) => n <= config.maxViews)}

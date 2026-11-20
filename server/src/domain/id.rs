@@ -1,6 +1,7 @@
 use std::{fmt, str::FromStr};
 
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 
 const ID_BYTES: usize = 12;
 const ID_LEN: usize = 16; // base64 of 12 bytes, no padding
@@ -30,6 +31,20 @@ impl FromStr for SecretId {
             && s.bytes()
                 .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
         valid.then(|| Self(s.to_owned())).ok_or(())
+    }
+}
+
+impl Serialize for SecretId {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for SecretId {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        String::deserialize(d)?
+            .parse()
+            .map_err(|()| D::Error::custom("invalid secret id"))
     }
 }
 

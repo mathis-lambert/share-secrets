@@ -3,9 +3,10 @@ import { CreatePage } from "@/features/create/CreatePage";
 import { HowItWorksPage } from "@/features/docs/HowItWorksPage";
 import { LegalPage } from "@/features/docs/LegalPage";
 import { RevealPage } from "@/features/reveal/RevealPage";
+import { DeadEnd } from "@/ui/components/DeadEnd";
 import { Layout } from "@/ui/components/Layout";
 import { ConfigProvider } from "./config";
-import { Link, useRoute } from "./router";
+import { useRoute } from "./router";
 
 export function App() {
   return (
@@ -31,15 +32,9 @@ function Page() {
       return <LegalPage />;
     case "notFound":
       return (
-        <div className="dead">
-          <pre className="dead-code" aria-hidden="true">
-            {t.notFound.title}
-          </pre>
+        <DeadEnd>
           <p className="muted">{t.notFound.help}</p>
-          <Link to="/" className="btn btn-secondary">
-            {t.nav.new}
-          </Link>
-        </div>
+        </DeadEnd>
       );
   }
 }

@@ -99,7 +99,6 @@ impl Store for FileStore {
         let mut secret = read(&path)?;
         let (action, outcome) = f(&mut secret);
         match action {
-            Action::Keep => {}
             Action::Save => self.write(&path, &secret)?,
             Action::Remove => fs::remove_file(&path)?,
         }
@@ -107,10 +106,12 @@ impl Store for FileStore {
     }
 
     async fn delete_expired(&self, now: u64) -> Result<u64, StorageError> {
-        let _guard = self.guard();
         let mut removed = 0;
         for entry in fs::read_dir(&self.dir)? {
             let path = entry?.path();
+            // Lock per file, not for the whole scan, so requests can
+            // interleave with a long sweep.
+            let _guard = self.guard();
             let name = path
                 .file_name()
                 .and_then(|n| n.to_str())
@@ -137,26 +138,11 @@ impl Store for FileStore {
 mod tests {
     use super::*;
 
-    fn secret(expires_at: u64) -> Secret {
-        Secret {
-            id: SecretId::random(),
-            ciphertext: vec![1],
-            iv: vec![],
-            salt: vec![],
-            passphrase: None,
-            auth_hash: vec![],
-            created_at: 0,
-            expires_at,
-            views_left: 1,
-            failed_attempts: 0,
-        }
-    }
-
     #[tokio::test]
     async fn lifecycle() {
         let dir = tempfile::tempdir().unwrap();
         let store = FileStore::open(dir.path()).unwrap();
-        let s = secret(100);
+        let s = Secret::fixture(100);
         store.create(&s).await.unwrap();
         assert!(matches!(
             store.create(&s).await,
@@ -192,7 +178,7 @@ mod tests {
     async fn delete_expired_keeps_live_secrets() {
         let dir = tempfile::tempdir().unwrap();
         let store = FileStore::open(dir.path()).unwrap();
-        let (live, dead) = (secret(200), secret(50));
+        let (live, dead) = (Secret::fixture(200), Secret::fixture(50));
         store.create(&live).await.unwrap();
         store.create(&dead).await.unwrap();
         fs::write(dir.path().join("secrets/.tmp-orphan"), b"").unwrap();

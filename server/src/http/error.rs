@@ -1,10 +1,10 @@
 use axum::{
-    Json,
-    http::{StatusCode, header},
+    http::StatusCode,
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
 
+use super::json::no_store;
 use crate::service::ServiceError;
 
 /// An error as returned to clients: `{"error": code, "message": text}`.
@@ -72,11 +72,6 @@ impl IntoResponse for ApiError {
             error: self.code,
             message: &self.message,
         };
-        (
-            self.status,
-            [(header::CACHE_CONTROL, "no-store")],
-            Json(body),
-        )
-            .into_response()
+        (self.status, no_store(body)).into_response()
     }
 }

@@ -55,7 +55,9 @@ fn from_row(row: &PgRow) -> Result<Secret, StorageError> {
         _ => None,
     };
     Ok(Secret {
-        id: id.parse().map_err(|()| StorageError::NotFound)?,
+        id: id
+            .parse()
+            .map_err(|()| StorageError::Corrupt(format!("invalid id {id:?}")))?,
         ciphertext: row.try_get("ciphertext")?,
         iv: row.try_get("iv")?,
         salt: row.try_get("salt")?,
@@ -130,7 +132,6 @@ impl Store for PostgresStore {
         let mut secret = locked(&mut tx, id).await?;
         let (action, outcome) = f(&mut secret);
         match action {
-            Action::Keep => {}
             Action::Save => {
                 // Only counters change after creation.
                 sqlx::query(
@@ -172,28 +173,10 @@ mod tests {
         Some(PostgresStore::connect(&url).await.expect("connect"))
     }
 
-    fn secret(expires_at: u64) -> Secret {
-        Secret {
-            id: SecretId::random(),
-            ciphertext: vec![1; 32],
-            iv: vec![0; 12],
-            salt: vec![0; 16],
-            passphrase: Some(Passphrase {
-                salt: vec![2; 16],
-                iterations: 600_000,
-            }),
-            auth_hash: vec![3; 32],
-            created_at: 1,
-            expires_at,
-            views_left: 2,
-            failed_attempts: 0,
-        }
-    }
-
     #[tokio::test]
     async fn lifecycle() {
         let Some(store) = store().await else { return };
-        let s = secret(u64::MAX >> 2);
+        let s = Secret::fixture(u64::MAX >> 2);
         store.create(&s).await.unwrap();
         assert!(matches!(
             store.create(&s).await,
@@ -225,7 +208,7 @@ mod tests {
     #[tokio::test]
     async fn delete_expired() {
         let Some(store) = store().await else { return };
-        let (live, dead) = (secret(u64::MAX >> 2), secret(5));
+        let (live, dead) = (Secret::fixture(u64::MAX >> 2), Secret::fixture(5));
         store.create(&live).await.unwrap();
         store.create(&dead).await.unwrap();
         assert!(store.delete_expired(10).await.unwrap() >= 1);

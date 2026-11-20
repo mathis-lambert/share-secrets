@@ -52,7 +52,7 @@ export function useScramble(from: string, to: string, run: unknown, onDone?: () 
         const source = from[i] ?? "";
         const settled = p >= settle[i]!;
         if (settled) out += target;
-        else if (p < settle[i]! * 0.35) out += source === "\n" ? "\n" : source || "";
+        else if (p < settle[i]! * 0.35) out += source;
         else out += target === "\n" || source === "\n" ? "\n" : randomGlyph();
       }
       setText(out);

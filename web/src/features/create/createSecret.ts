@@ -1,13 +1,20 @@
 import { api } from "@/api/client";
-import { toBase64Url } from "@/crypto/encoding";
+import type { PublicConfig } from "@/api/types";
+import { toCreateRequest } from "@/api/wire";
 import { seal } from "@/crypto/envelope";
 
-export interface CreateOptions {
-  text: string;
+export interface Options {
   ttl: number;
   views: number;
-  passphrase?: string;
+  /** Empty for none. */
+  passphrase: string;
 }
+
+export const defaultOptions = (config: PublicConfig): Options => ({
+  ttl: config.defaultTtl,
+  views: 1,
+  passphrase: "",
+});
 
 export interface SharedSecret {
   id: string;
@@ -18,32 +25,21 @@ export interface SharedSecret {
   /** Exactly what was uploaded, for display. */
   ciphertext: string;
   /** Kept in memory only, so the sender can delete the secret. */
-  auth: string;
+  auth: Uint8Array;
 }
 
 /** Encrypts locally, uploads the ciphertext and builds the link. */
-export async function createSecret({ text, ttl, views, passphrase }: CreateOptions): Promise<SharedSecret> {
+export async function createSecret(text: string, { ttl, views, passphrase }: Options): Promise<SharedSecret> {
   const sealed = await seal(text, passphrase || undefined);
-  const auth = toBase64Url(sealed.auth);
-  const ciphertext = toBase64Url(sealed.ciphertext);
-  const { id, expiresAt } = await api.create({
-    ciphertext,
-    iv: toBase64Url(sealed.iv),
-    salt: toBase64Url(sealed.salt),
-    passphrase: sealed.passphrase
-      ? { salt: toBase64Url(sealed.passphrase.salt), iterations: sealed.passphrase.iterations }
-      : null,
-    auth,
-    ttl,
-    views,
-  });
+  const request = toCreateRequest(sealed, { ttl, views });
+  const { id, expiresAt } = await api.create(request);
   return {
     id,
     link: `${window.location.origin}/s/${id}#${sealed.linkKey}`,
     expiresAt,
     views,
-    hasPassphrase: Boolean(sealed.passphrase),
-    ciphertext,
-    auth,
+    hasPassphrase: sealed.passphrase !== null,
+    ciphertext: request.ciphertext,
+    auth: sealed.auth,
   };
 }

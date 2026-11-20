@@ -1,8 +1,11 @@
 import { ArrowRight, Ban, FileLock2, FileText, KeyRound, Monitor, Server, ShieldCheck } from "lucide-react";
+import { useConfig } from "@/app/config";
 import { Link } from "@/app/router";
+import { t } from "@/content/strings";
 
 /** Plain documentation of the scheme; deeper material folds away. */
 export function HowItWorksPage() {
+  const maxAttempts = useConfig()?.maxFailedAttempts ?? 5;
   return (
     <article className="doc">
       <h1>How it works</h1>
@@ -90,7 +93,7 @@ auth    = HKDF-SHA256(ikm, salt, "share-secrets/v1/auth")     → 32 bytes`}</pr
         <summary>Passphrases</summary>
         <p>
           A passphrase is stretched with PBKDF2 and mixed into the key, so the link alone is useless. A wrong passphrase
-          produces a wrong proof of key: the server refuses it without spending a read, and deletes the secret after five
+          produces a wrong proof of key: the server refuses it without spending a read, and deletes the secret after {maxAttempts}
           failures, which caps online guessing.
         </p>
       </details>
@@ -113,7 +116,7 @@ DELETE /api/secrets/{id}         { auth }`}</pre>
 
       <p className="doc-end">
         <Link to="/" className="btn btn-primary">
-          New secret
+          {t.nav.new}
         </Link>
       </p>
     </article>

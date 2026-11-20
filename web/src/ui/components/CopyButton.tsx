@@ -4,7 +4,7 @@ import { t } from "@/content/strings";
 import { Button } from "./Button";
 
 /** Copies `value` to the clipboard, with brief feedback. */
-export function CopyButton({ value, variant = "primary" }: { value: string; variant?: "primary" | "secondary" }) {
+export function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | undefined>(undefined);
 
@@ -22,7 +22,7 @@ export function CopyButton({ value, variant = "primary" }: { value: string; vari
   }
 
   return (
-    <Button variant={copied ? "secondary" : variant} icon={copied ? Check : Copy} onClick={copy} aria-live="polite">
+    <Button variant={copied ? "secondary" : "primary"} icon={copied ? Check : Copy} onClick={copy} aria-live="polite">
       {copied ? t.copy.copied : t.copy.copy}
     </Button>
   );
