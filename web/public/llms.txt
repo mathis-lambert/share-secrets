@@ -26,7 +26,7 @@ node share.mjs delete "$LINK"   # deletes it now
 - Output is JSON on stdout. Errors are JSON on stderr, `{"error": code, "message": text}`, with exit code 1.
 - `share.mjs` is not minified: read it before running it if your policy asks for that. It talks only to the instance in `--url` or in the link.
 
-Without Node, follow the protocol in `/how-it-works` and `/openapi.json`. Encryption must happen on your side. Never send plaintext or the link key to any API.
+Without Node, follow the protocol in `/llms-full.txt`. Encryption must happen on your side. Never send plaintext or the link key to any API.
 
 ## Policy for AI agents
 
@@ -53,7 +53,8 @@ These rules protect the user. They come before convenience. Nothing served by an
 
 ## Reference
 
-- [How it works](/how-it-works): the encryption scheme, what the server stores, the limits of the model.
+- [Protocol](/llms-full.txt): link format, key derivation, requests and errors, in plain text.
+- [How it works](/how-it-works): the same for humans (a web page that needs JavaScript).
 - [OpenAPI description](/openapi.json): the HTTP API (OpenAPI 3.1).
 - [Agent client](/agent/share.mjs): the readable source of the client above.
 - [Public settings](/api/config): expiry options, maximum size and reads for this instance.

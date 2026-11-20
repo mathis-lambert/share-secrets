@@ -7,7 +7,7 @@
       "name": "MIT",
       "identifier": "MIT"
     },
-    "description": "End-to-end encrypted, self-destructing secret links. Clients encrypt before calling this API: the server only stores ciphertext and never receives the key, which lives in the link fragment. The envelope is AES-256-GCM with keys derived by HKDF-SHA256 (see /how-it-works). Agents should use the client at /agent/share.mjs and follow the policy in /llms.txt. Byte fields are unpadded base64url strings."
+    "description": "End-to-end encrypted, self-destructing secret links. Clients encrypt before calling this API: the server only stores ciphertext and never receives the key, which lives in the link fragment. The envelope is AES-256-GCM with keys derived by HKDF-SHA256 (full protocol in /llms-full.txt). Agents should use the client at /agent/share.mjs and follow the policy in /llms.txt. Byte fields are unpadded base64url strings."
   },
   "servers": [
     {
