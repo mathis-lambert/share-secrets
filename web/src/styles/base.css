@@ -1,0 +1,52 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  color-scheme: dark light;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font: 400 14px/1.6 var(--font);
+  font-feature-settings: "calt" 0; /* no ligatures: secrets must read literally */
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: var(--amber);
+  color: var(--amber-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

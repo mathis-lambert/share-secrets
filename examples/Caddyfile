@@ -1,0 +1,6 @@
+# Minimal HTTPS front for share-secrets. Caddy obtains the certificate itself.
+# Run share-secrets with TRUST_PROXY=true and HSTS=true behind it.
+
+secrets.example.com {
+	reverse_proxy 127.0.0.1:8080
+}

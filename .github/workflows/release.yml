@@ -1,0 +1,133 @@
+# Publishing a GitHub release vX.Y.Z builds the image for linux/amd64 and
+# linux/arm64 on native runners and pushes it to GHCR as X.Y.Z, X.Y, X and latest.
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tag matches the versions in the code
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          grep -qx "version = \"$version\"" server/Cargo.toml \
+            || { echo "server/Cargo.toml is not at $version" >&2; exit 1; }
+          test "$(jq -r .version web/package.json)" = "$version" \
+            || { echo "web/package.json is not at $version" >&2; exit 1; }
+
+  build:
+    needs: verify
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          build-args: VERSION=${{ github.ref_name }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
+      - name: Keep the digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: mkdir -p /tmp/digests && touch "/tmp/digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digest-${{ strategy.job-index }}
+          path: /tmp/digests/*
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+      - name: Image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref_name, 'v0.') }}
+            type=raw,value=latest
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push the multi-arch manifest
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf "$IMAGE@sha256:%s " *)
+      - name: Summary
+        run: |
+          digest=$(docker buildx imagetools inspect "$IMAGE:${{ steps.meta.outputs.version }}" --format '{{json .Manifest}}' | jq -r .digest)
+          {
+            echo "### Published"
+            echo
+            jq -r '.tags[] | "- `" + . + "`"' <<< "$DOCKER_METADATA_OUTPUT_JSON"
+            echo
+            echo "Digest: \`$digest\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Optional: tell a deployment repository that a release is out. Set the
+  # variable DEPLOY_DISPATCH_REPO (owner/name) and the secret
+  # DEPLOY_DISPATCH_TOKEN (contents: write on that repository) to enable it.
+  notify:
+    needs: publish
+    if: vars.DEPLOY_DISPATCH_REPO != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send repository_dispatch
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
+          REPO: ${{ vars.DEPLOY_DISPATCH_REPO }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "DEPLOY_DISPATCH_TOKEN is not set" >&2; exit 1; }
+          gh api "repos/$REPO/dispatches" \
+            -f event_type=share-secrets-release \
+            -f "client_payload[version]=${GITHUB_REF_NAME#v}"

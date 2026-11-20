@@ -1,0 +1,45 @@
+# share-secrets with PostgreSQL.
+#
+#   POSTGRES_PASSWORD=$(openssl rand -hex 24) docker compose up -d
+#
+# Then put a TLS reverse proxy in front of port 8080 (see the README):
+# browsers only allow the WebCrypto API on HTTPS pages and localhost.
+
+services:
+  share-secrets:
+    image: ghcr.io/mathis-lambert/share-secrets:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      DATABASE_URL: postgres://share_secrets:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/share_secrets
+      # Set to true when a reverse proxy adds X-Forwarded-For.
+      TRUST_PROXY: "false"
+      # SITE_NAME: Share Secrets
+      # TTL_OPTIONS: 1h,1d,7d
+      # LEGAL_PUBLISHER: Your name or company
+      # LEGAL_CONTACT: you@example.com
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: share_secrets
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: share_secrets
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U share_secrets -d share_secrets"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres:

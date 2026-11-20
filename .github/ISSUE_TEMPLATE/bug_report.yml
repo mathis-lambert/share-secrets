@@ -1,0 +1,29 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not report security vulnerabilities here. See SECURITY.md.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead.
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: e.g. 0.1.0 or the image digest
+    validations: { required: true }
+  - type: dropdown
+    id: storage
+    attributes:
+      label: Storage
+      options: [PostgreSQL, Files]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server logs
+      render: json
