@@ -10,7 +10,7 @@ COPY web/ ./
 RUN npm run build
 
 # ── Server ────────────────────────────────────────────────────────────────────
-FROM rust:1.99-alpine AS server
+FROM rust:1.100-alpine AS server
 RUN apk add --no-cache musl-dev
 WORKDIR /server
 # Build dependencies first so source edits do not invalidate them.
